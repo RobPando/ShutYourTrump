@@ -8,17 +8,35 @@
 
 import UIKit
 import SpriteKit
+import AVFoundation
+import GameKit
 
-class GameViewController: UIViewController {
+var filePath = NSBundle.mainBundle().pathForResource("TrumpApp", ofType: "mp3")
+var backingAudio = AVAudioPlayer()
+let audioNSURL = NSURL(fileURLWithPath: filePath!)
 
+class GameViewController: UIViewController, GKGameCenterControllerDelegate {
+    
+  
+    
+    func play() {
+        do {
+            backingAudio = try AVAudioPlayer(contentsOfURL: audioNSURL)
+        } catch { return print("Cannot Find The Audio") }
+        
+        backingAudio.numberOfLoops = -1
+        backingAudio.play()
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        if let scene = GameScene(fileNamed:"GameScene") {
+        play()
+    
+        let scene = MainMenu(size: CGSize(width: 1536, height: 2048))
             // Configure the view.
             let skView = self.view as! SKView
-            skView.showsFPS = true
-            skView.showsNodeCount = true
+            skView.showsFPS = false
+            skView.showsNodeCount = false
             
             /* Sprite Kit applies additional optimizations to improve rendering performance */
             skView.ignoresSiblingOrder = true
@@ -27,7 +45,42 @@ class GameViewController: UIViewController {
             scene.scaleMode = .AspectFill
             
             skView.presentScene(scene)
+            self.authPlayer()
+        
+        
+    }
+    
+    func saveHighScore(score: Int) {
+        if GKLocalPlayer.localPlayer().authenticated   {
+            let scoreReporter = GKScore(leaderboardIdentifier: "ShutYourTrumpScore")
+            scoreReporter.value = Int64(score)
+            
+            let scoreArray: [GKScore] = [scoreReporter]
+            GKScore.reportScores(scoreArray, withCompletionHandler: nil)
         }
+    }
+    
+    
+    func authPlayer() {
+        
+        let localPlayer = GKLocalPlayer.localPlayer()
+        
+        localPlayer.authenticateHandler = {
+            (view, error) in
+            if view != nil {
+                self.presentViewController(view!, animated: true, completion: nil)
+                
+            }
+            else {
+                print(GKLocalPlayer.localPlayer().authenticated)
+            }
+        }
+        
+        
+    }
+    
+    func gameCenterViewControllerDidFinish(gameCenterViewController: GKGameCenterViewController) {
+        gameCenterViewController.dismissViewControllerAnimated(true, completion: nil)
     }
 
     override func shouldAutorotate() -> Bool {
